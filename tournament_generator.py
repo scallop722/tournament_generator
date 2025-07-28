@@ -38,8 +38,6 @@ class TournamentGenerator:
         remaining_combinations = all_combinations.copy()
         
         while remaining_combinations:
-            # 対戦数の最小値を找す
-            min_matches = min(match_count.values())
             
             # 対戦数が最少の参加者同士の組み合わせを優先探す
             best_match = None
@@ -83,7 +81,51 @@ class TournamentGenerator:
                 
                 remaining_combinations.remove(selected_match)
         
-        return ordered_matches
+        # 4. 1P、2P反転アルゴリズムを適用
+        balanced_matches = self.apply_player_balance(ordered_matches, participants)
+        
+        return balanced_matches
+    
+    def apply_player_balance(self, matches: List[Tuple[str, str]], participants: List[str]) -> List[Tuple[str, str]]:
+        """
+        1P、2P反転アルゴリズムを適用して公平な1P/2P配置を実現
+        
+        仕様:
+        - 各参加者に重みを設定（初期値0）
+        - 1Pになったら+1、2Pになったら-1
+        - 対戦時に重みが低い方を1P側に配置
+        """
+        # 各参加者の重みを初期化
+        player_weights = {participant: 0 for participant in participants}
+        
+        # 各対戦に対して1P/2Pを決定し、重みを更新
+        balanced_matches = []
+        
+        for match in matches:
+            p1, p2 = match
+            
+            # 重みを比較して1P/2Pを決定
+            if player_weights[p1] < player_weights[p2]:
+                # p1の重みが低いのでp1を1Pに
+                first_player = p1
+                second_player = p2
+            elif player_weights[p1] > player_weights[p2]:
+                # p2の重みが低いのでp2を1Pに
+                first_player = p2
+                second_player = p1
+            else:
+                # 重みが同じ場合は元の順序を維持
+                first_player = p1
+                second_player = p2
+            
+            # 重みを更新（1P: +1, 2P: -1）
+            player_weights[first_player] += 1
+            player_weights[second_player] -= 1
+            
+            # 結果に追加
+            balanced_matches.append((first_player, second_player))
+        
+        return balanced_matches
     
     def split_participants(self, participants: List[str]) -> List[List[str]]:
         """参加者を適切なテーブル数に分割"""
