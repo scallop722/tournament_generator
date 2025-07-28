@@ -26,8 +26,64 @@ class TournamentGenerator:
         return [chr(ord('A') + i) for i in range(count)]
     
     def generate_matches(self, participants: List[str]) -> List[Tuple[str, str]]:
-        """全組み合わせの対戦カードを生成"""
-        return list(itertools.combinations(participants, 2))
+        """仕様書の例に基づいた対戦順決定アルゴリズムで対戦カードを生成"""
+        # 1. 全組み合わせを生成（並び替え前）
+        all_combinations = list(itertools.combinations(participants, 2))
+        
+        # 2. 参加者毎の対戦数を初期化
+        match_count = {participant: 0 for participant in participants}
+        
+        # 3. 対戦順の決定
+        ordered_matches = []
+        remaining_combinations = all_combinations.copy()
+        
+        while remaining_combinations:
+            # 対戦数の最小値を找す
+            min_matches = min(match_count.values())
+            
+            # 対戦数が最少の参加者同士の組み合わせを優先探す
+            best_match = None
+            best_score = float('inf')
+            
+            for combination in remaining_combinations:
+                p1, p2 = combination
+                # 両方の参加者の対戦数の合計をスコアとする
+                score = match_count[p1] + match_count[p2]
+                
+                # より少ない対戦数の組み合わせを優先
+                if score < best_score:
+                    best_score = score
+                    best_match = combination
+                # 同じスコアの場合、より少ない最小対戦数を持つ組み合わせを優先
+                elif score == best_score:
+                    current_min = min(match_count[p1], match_count[p2])
+                    best_min = min(match_count[best_match[0]], match_count[best_match[1]])
+                    if current_min < best_min:
+                        best_match = combination
+            
+            if best_match:
+                # 選ばれた組み合わせを結果に追加
+                ordered_matches.append(best_match)
+                
+                # 対戦数を更新
+                p1, p2 = best_match
+                match_count[p1] += 1
+                match_count[p2] += 1
+                
+                # 使用した組み合わせを削除
+                remaining_combinations.remove(best_match)
+            else:
+                # 万が一のフォールバック：最初の組み合わせを使用
+                selected_match = remaining_combinations[0]
+                ordered_matches.append(selected_match)
+                
+                p1, p2 = selected_match
+                match_count[p1] += 1
+                match_count[p2] += 1
+                
+                remaining_combinations.remove(selected_match)
+        
+        return ordered_matches
     
     def split_participants(self, participants: List[str]) -> List[List[str]]:
         """参加者を適切なテーブル数に分割"""
